@@ -9,3 +9,5 @@ target/
 node_modules/
 artifacts/*.json
 .env
+demo_wallet.json
+recovery_key.json
