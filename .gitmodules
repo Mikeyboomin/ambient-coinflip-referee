@@ -1,0 +1,3 @@
+[submodule "vendor/oracle-program-types"]
+	path = vendor/oracle-program-types
+	url = https://github.com/AmbientCrypto/oracle-program-types
