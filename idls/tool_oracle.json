@@ -1,0 +1,587 @@
+{
+  "address": "721QWDeUzVL77UCzCFHsVGCMBVup8GsAMPaD2YvWvw97",
+  "metadata": {
+    "name": "oracle_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "claim_request",
+      "discriminator": [
+        83,
+        18,
+        38,
+        149,
+        130,
+        72,
+        123,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "request_account",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "worker",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "create_request",
+      "discriminator": [
+        219,
+        191,
+        93,
+        237,
+        18,
+        44,
+        42,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "new_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  111,
+                  108,
+                  45,
+                  111,
+                  114,
+                  97,
+                  99,
+                  108,
+                  101,
+                  45,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "output_account",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  111,
+                  108,
+                  45,
+                  111,
+                  114,
+                  97,
+                  99,
+                  108,
+                  101,
+                  45,
+                  111,
+                  117,
+                  116,
+                  112,
+                  117,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "output_account_size",
+          "type": {
+            "option": "u32"
+          }
+        },
+        {
+          "name": "request",
+          "type": {
+            "defined": {
+              "name": "ToolOracleRequestAccount"
+            }
+          }
+        },
+        {
+          "name": "escrow",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "reclaim_accounts",
+      "discriminator": [
+        38,
+        7,
+        114,
+        181,
+        131,
+        108,
+        151,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "job_request",
+          "writable": true
+        },
+        {
+          "name": "output",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "destination",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "submit_failure",
+      "discriminator": [
+        236,
+        226,
+        200,
+        155,
+        186,
+        211,
+        166,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "job_request",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "error_code",
+          "type": {
+            "defined": {
+              "name": "FaultCode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "submit_intermediate_input",
+      "discriminator": [
+        86,
+        213,
+        9,
+        13,
+        193,
+        244,
+        241,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "job_request",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "cost",
+          "type": "u64"
+        },
+        {
+          "name": "job_request_id",
+          "type": "pubkey"
+        },
+        {
+          "name": "context_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "submit_success",
+      "discriminator": [
+        174,
+        66,
+        8,
+        168,
+        227,
+        206,
+        212,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "job_request",
+          "writable": true
+        },
+        {
+          "name": "output_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "output",
+          "type": {
+            "defined": {
+              "name": "AccountOrString"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ToolOracleRequestAccount",
+      "discriminator": [
+        12,
+        150,
+        98,
+        244,
+        106,
+        173,
+        19,
+        226
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountOrString",
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Account",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "Direct",
+            "fields": [
+              "string"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "CompletedRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_request_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "context_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FaultCode",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "RequestedInvalidMaxRequests"
+          },
+          {
+            "name": "InvalidStateTransition"
+          },
+          {
+            "name": "InvalidStateForInput"
+          },
+          {
+            "name": "UnauthorizedWorker"
+          },
+          {
+            "name": "InsufficientFunds"
+          },
+          {
+            "name": "InvalidStateForFailure"
+          },
+          {
+            "name": "PromptIdInvalid"
+          },
+          {
+            "name": "FailedContextFetch"
+          },
+          {
+            "name": "FailedContextStore"
+          },
+          {
+            "name": "AlreadyClaimed"
+          },
+          {
+            "name": "InferenceFailed"
+          },
+          {
+            "name": "InvalidStateForSuccess"
+          },
+          {
+            "name": "OutputTooLarge"
+          },
+          {
+            "name": "FailedIntermediateResultSubmission"
+          },
+          {
+            "name": "FailedRegexCompile"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ToolOracleRequestAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "ToolOracleRequestState"
+              }
+            }
+          },
+          {
+            "name": "initial_prompt",
+            "type": {
+              "defined": {
+                "name": "ToolOracleRequestInput"
+              }
+            }
+          },
+          {
+            "name": "max_requests",
+            "type": "u8"
+          },
+          {
+            "name": "output_filter",
+            "type": {
+              "option": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ToolOracleRequestInput",
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Account",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "Direct",
+            "fields": [
+              "string"
+            ]
+          },
+          {
+            "name": "Context",
+            "fields": [
+              {
+                "array": [
+                  "u8",
+                  16
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ToolOracleRequestState",
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Requested"
+          },
+          {
+            "name": "Started",
+            "fields": [
+              {
+                "name": "worker",
+                "type": "pubkey"
+              },
+              {
+                "name": "completed_requests_arr",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "CompletedRequest"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Completed",
+            "fields": [
+              {
+                "name": "completed_requests_arr",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "CompletedRequest"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "output",
+                "type": {
+                  "defined": {
+                    "name": "AccountOrString"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Failed",
+            "fields": [
+              {
+                "name": "reason",
+                "type": {
+                  "defined": {
+                    "name": "FaultCode"
+                  }
+                }
+              },
+              {
+                "name": "completed_requests_arr",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "CompletedRequest"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "SEED",
+      "type": "string",
+      "value": "\"anchor\""
+    }
+  ]
+}

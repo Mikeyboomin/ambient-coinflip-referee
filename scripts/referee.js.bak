@@ -1,0 +1,183 @@
+const fs = require("fs");
+const anchor = require("@coral-xyz/anchor");
+const { PublicKey, SystemProgram } = require("@solana/web3.js");
+const BN = require("bn.js");
+
+const TOOL_ORACLE_PROGRAM_ID = new PublicKey(
+  "721QWDeUzVL77UCzCFHsVGCMBVup8GsAMPaD2YvWvw97"
+);
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function loadJson(path) {
+  return JSON.parse(fs.readFileSync(path, "utf8"));
+}
+
+function short(s, n = 10) {
+  if (!s) return s;
+  return s.length > n ? `${s.slice(0, n)}...` : s;
+}
+
+function pickCreateRequestInstructionName(idl) {
+  const candidates = (idl.instructions || [])
+    .map((ix) => ix.name)
+    .filter((name) => /create.*request/i.test(name));
+
+  if (candidates.length === 0) {
+    const all = (idl.instructions || []).map((ix) => ix.name);
+    throw new Error(
+      `Could not find a CreateRequest instruction in IDL. Instructions: ${all.join(", ")}`
+    );
+  }
+
+  return (
+    candidates.find((n) => n === "createRequest") ||
+    candidates.find((n) => n === "create_request") ||
+    candidates[0]
+  );
+}
+
+function findRequestAccountName(idl) {
+  const accounts = idl.accounts || [];
+  const match = accounts.find((a) => /tool.*oracle.*request/i.test(a.name));
+  if (!match) {
+    const names = accounts.map((a) => a.name);
+    throw new Error(
+      `Could not find ToolOracleRequest account in IDL. Accounts: ${names.join(", ")}`
+    );
+  }
+  return match.name;
+}
+
+function toCamelCase(name) {
+  return name
+    .replace(/[-_]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ""))
+    .replace(/^(.)/, (m) => m.toLowerCase());
+}
+
+async function main() {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+
+  const connection = provider.connection;
+  const payer = provider.wallet.publicKey;
+
+  if (!fs.existsSync("artifacts/round.json")) {
+    throw new Error("Missing artifacts/round.json. Run: node scripts/demo.js");
+  }
+  const round = loadJson("artifacts/round.json");
+
+  // Keep prompt under 800 bytes
+  const prompt = (
+    `You are an on-chain referee for a commit–reveal coinflip.\n` +
+    `Return ONLY one word: VALID or CHEAT.\n\n` +
+    `Rules:\n` +
+    `1) commitA == sha256(choiceA || secretA)\n` +
+    `2) commitB == sha256(choiceB || secretB)\n` +
+    `3) coin == sha256(secretA || secretB || game_pubkey)[0] % 2\n` +
+    `4) winner matches coin vs choiceA\n\n` +
+    `Evidence:\n` +
+    `game=${round.game}\n` +
+    `choiceA=${round.choiceA} choiceB=${round.choiceB}\n` +
+    `commitA=${short(round.commitA_hex, 18)} commitB=${short(round.commitB_hex, 18)}\n` +
+    `secretA=${short(round.secretA_hex, 18)} secretB=${short(round.secretB_hex, 18)}\n` +
+    `coin=${round.coin} winner=${round.winner}\n`
+  );
+
+  const outputFilter = "^(VALID|CHEAT)$";
+  const escrow = new BN(1_000_000); // 0.001 SOL
+  const maxRequests = 3;
+
+  const [requestPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("tool-oracle-request"), payer.toBuffer()],
+    TOOL_ORACLE_PROGRAM_ID
+  );
+
+  console.log("=== AMBIENT TOOL ORACLE REFEREE (IDL-based) ===");
+  console.log("rpc       :", connection.rpcEndpoint);
+  console.log("payer     :", payer.toBase58());
+  console.log("requestPda:", requestPda.toBase58());
+
+  const idl = await anchor.Program.fetchIdl(TOOL_ORACLE_PROGRAM_ID, provider);
+  if (!idl) throw new Error("Failed to fetch Tool Oracle IDL from chain.");
+
+  const program = new anchor.Program(idl, TOOL_ORACLE_PROGRAM_ID, provider);
+
+  const createIxName = pickCreateRequestInstructionName(idl);
+  const requestAccountTypeName = findRequestAccountName(idl);
+  const requestAccountAccessor = toCamelCase(requestAccountTypeName);
+
+  console.log("using ix   :", createIxName);
+  console.log("acct type  :", requestAccountTypeName);
+
+  // If your IDL uses snake_case, Anchor still expects camelCase in JS.
+  const requestData = {
+    state: { requested: {} },
+    initialPrompt: { direct: prompt },
+    maxRequests,
+    outputFilter,
+  };
+
+  const args = {
+    outputAccountSize: null,
+    request: requestData,
+    escrow,
+  };
+
+  const sig = await program.methods[createIxName](args)
+    .accounts({
+      newAccount: requestPda,
+      signer: payer,
+      systemProgram: SystemProgram.programId,
+      outputAccount: null,
+    })
+    .rpc({ commitment: "confirmed" });
+
+  console.log("request tx :", sig);
+  console.log("polling...");
+
+  for (let i = 0; i < 120; i++) {
+    const acct = await program.account[requestAccountAccessor].fetchNullable(requestPda);
+    if (acct?.state) {
+      const stateKey = Object.keys(acct.state)[0];
+
+      if (stateKey && stateKey.toLowerCase().includes("completed")) {
+        const out = {
+          requestPda: requestPda.toBase58(),
+          requestTx: sig,
+          state: stateKey,
+          account: acct,
+          timestamp: new Date().toISOString(),
+        };
+        fs.writeFileSync("artifacts/referee.json", JSON.stringify(out, null, 2));
+        console.log("completed ✅ wrote artifacts/referee.json");
+        return;
+      }
+
+      if (stateKey && stateKey.toLowerCase().includes("failed")) {
+        const out = {
+          requestPda: requestPda.toBase58(),
+          requestTx: sig,
+          state: stateKey,
+          account: acct,
+          timestamp: new Date().toISOString(),
+        };
+        fs.writeFileSync("artifacts/referee.json", JSON.stringify(out, null, 2));
+        console.log("failed ❌ wrote artifacts/referee.json");
+        return;
+      }
+    }
+
+    if ((i + 1) % 5 === 0) process.stdout.write(".");
+    await sleep(1000);
+  }
+
+  throw new Error("Timed out waiting for oracle completion.");
+}
+
+main().catch((e) => {
+  console.error("ERROR:", e?.message || e);
+  process.exit(1);
+});
